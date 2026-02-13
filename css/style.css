@@ -1,5 +1,24 @@
 body {
-  background: #000;
-  overflow: hidden;
-  margin: 0;
+    background: #000;
+    overflow: hidden;
+    margin: 0;
+}
+
+#heart-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff77ae;
+    font-family: "Shadows Into Light", cursive;
+    font-weight: 400;
+    font-style: normal;
+    font-size: clamp(24px, 8vw, 48px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    text-shadow: 0 0 15px #ff1775, 0 0 30px #ff77fc;
+    text-align: center;
+    white-space: pre-wrap;
+    line-height: 1.2;
 }
