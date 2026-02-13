@@ -146,7 +146,6 @@ function render(time) {
         allPositions.push(p.pos.x, p.pos.y, p.pos.z);
         allColors.push(p.color.r, p.color.g, p.color.b);
 
-        // Малювання шлейфів
         if (explosionProgress > 0.1) {
             p.trail.forEach((tPos, index) => {
                 const ratio = index / p.trail.length;
