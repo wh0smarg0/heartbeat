@@ -134,18 +134,18 @@ gsap
 
 // ---------------- CLICK ----------------
 
-window.addEventListener("click", () => {
+function triggerExplosion() {
   if (!exploded) explode();
-});
-
-function explode() {
-  exploded = true;
-  explosionProgress = 0;
-
-  setTimeout(() => {
-    exploded = false;
-  }, 2000);
 }
+
+// для ПК
+window.addEventListener("click", triggerExplosion);
+
+// для телефона
+window.addEventListener("touchstart", (e) => {
+  e.preventDefault(); // чтобы не было двойного вызова
+  triggerExplosion();
+}, { passive: false });
 
 // ---------------- RENDER ----------------
 
