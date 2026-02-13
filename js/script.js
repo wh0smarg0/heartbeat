@@ -28,13 +28,8 @@ let heart = null;
 let sampler = null;
 let originHeart = null;
 
-// 💥 Raycaster
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
 let exploded = false;
 let explosionProgress = 0;
-let explosionCenter = new THREE.Vector3();
 
 new THREE.OBJLoader().load(
   "https://assets.codepen.io/127738/heart_2.obj",
@@ -46,7 +41,7 @@ new THREE.OBJLoader().load(
     group.add(heart);
 
     heart.material = new THREE.MeshBasicMaterial({
-      color: new THREE.Color("rgb(0,0,0)"),
+      visible: false // прячем меш, оставляем только частицы
     });
 
     originHeart = Array.from(heart.geometry.attributes.position.array);
@@ -84,41 +79,30 @@ const palette = [
 class SparkPoint {
   constructor() {
     sampler.sample(pos);
-    this.color = palette[Math.floor(Math.random() * palette.length)];
-    this.rand = Math.random() * 0.03;
+    this.base = pos.clone();
     this.pos = pos.clone();
-    this.one = null;
-    this.two = null;
+    this.color = palette[Math.floor(Math.random() * palette.length)];
+    this.rand = Math.random() * 0.5;
   }
 
-  update(a) {
+  update(time) {
     if (exploded) {
-      const dir = this.pos.clone().sub(explosionCenter).normalize();
-      const force = 0.5 + Math.random() * 1.5;
-
-      this.one = this.pos.clone().add(
-        dir.multiplyScalar(force * explosionProgress)
+      const dir = this.base.clone().normalize();
+      this.pos = this.base.clone().add(
+        dir.multiplyScalar(explosionProgress * (1 + this.rand))
       );
-      this.two = this.one.clone();
     } else {
       const noise =
-        simplex.noise4D(this.pos.x, this.pos.y, this.pos.z, 0.1) + 1.5;
-
-      const noise2 =
         simplex.noise4D(
-          this.pos.x * 500,
-          this.pos.y * 500,
-          this.pos.z * 500,
-          1
+          this.base.x * 1.5,
+          this.base.y * 1.5,
+          this.base.z * 1.5,
+          time * 0.0005
         ) + 1;
 
-      this.one = this.pos
+      this.pos = this.base
         .clone()
-        .multiplyScalar(1.01 + noise * 0.15 * beat.a);
-
-      this.two = this.pos
-        .clone()
-        .multiplyScalar(1 + noise2 * (beat.a + 0.3) - beat.a * 1.2);
+        .multiplyScalar(1 + noise * 0.15 * beat.a);
     }
   }
 }
@@ -148,29 +132,15 @@ gsap
     ease: "power3.out",
   });
 
-// ---------------- CLICK EXPLOSION ----------------
+// ---------------- CLICK ----------------
 
-window.addEventListener("click", (event) => {
-  if (!heart || exploded) return;
-
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObject(heart);
-
-  if (intersects.length > 0) {
-    explode();
-  }
+window.addEventListener("click", () => {
+  if (!exploded) explode();
 });
 
 function explode() {
   exploded = true;
   explosionProgress = 0;
-
-  heart.geometry.computeBoundingBox();
-  heart.geometry.boundingBox.getCenter(explosionCenter);
 
   setTimeout(() => {
     exploded = false;
@@ -179,30 +149,21 @@ function explode() {
 
 // ---------------- RENDER ----------------
 
-function render(a) {
+function render(time) {
+
   if (exploded) {
     explosionProgress += 0.05;
   } else {
-    explosionProgress *= 0.9;
+    explosionProgress *= 0.92; // плавная сборка
   }
 
   positions = [];
   colors = [];
 
-  spikes.forEach((g) => {
-    g.update(a);
-    const rand = g.rand;
-    const color = g.color;
-
-    if (g.one) {
-      positions.push(g.one.x, g.one.y, g.one.z);
-      colors.push(color.r, color.g, color.b);
-    }
-
-    if (g.two) {
-      positions.push(g.two.x, g.two.y, g.two.z);
-      colors.push(color.r, color.g, color.b);
-    }
+  spikes.forEach((p) => {
+    p.update(time);
+    positions.push(p.pos.x, p.pos.y, p.pos.z);
+    colors.push(p.color.r, p.color.g, p.color.b);
   });
 
   geometry.setAttribute(
@@ -214,32 +175,6 @@ function render(a) {
     "color",
     new THREE.BufferAttribute(new Float32Array(colors), 3)
   );
-
-  // деформация меша
-  const vs = heart.geometry.attributes.position.array;
-
-  for (let i = 0; i < vs.length; i += 3) {
-    const v = new THREE.Vector3(
-      originHeart[i],
-      originHeart[i + 1],
-      originHeart[i + 2]
-    );
-
-    const noise =
-      simplex.noise4D(
-        originHeart[i] * 1.5,
-        originHeart[i + 1] * 1.5,
-        originHeart[i + 2] * 1.5,
-        a * 0.0005
-      ) + 1;
-
-    v.multiplyScalar(noise * 0.15 * beat.a);
-    vs[i] = v.x;
-    vs[i + 1] = v.y;
-    vs[i + 2] = v.z;
-  }
-
-  heart.geometry.attributes.position.needsUpdate = true;
 
   controls.update();
   renderer.render(scene, camera);
